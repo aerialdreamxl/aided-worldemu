@@ -111,5 +111,3 @@ def loadInstance(instanceDir:Path)->dict:
         instance['contains'].remove(things)
         instance['contains'].append(processExternalFilesLoad(instanceDir,things))
     return instance
-
-print(loadInstance("userdata/demo实例"))
