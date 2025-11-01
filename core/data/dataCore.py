@@ -11,22 +11,9 @@ defaultAgentBackend={
 }
 
 #数据新建逻辑
-def newRoom():#新建房间
+def newAgentCharacter()->dict:#新建数字人角色
     return {
-        'version': dataVersion,         #数据版本
-        'type': "room",                 #房间
-        'id': "template",               #字符串id
-        'name': "",                     #名字
-        'simulationName': "模板",
-        'desc': "",                     #描述
-        'characters': [],               #次级数字人信息
-        'history': [],                  #历史对话记录
-        'resume': {},                   #预留项
-        'externalFiles': []             #外置数据列表
-    }
-def newAgentCharacter():#新建数字人
-    return {
-        'version': dataVersion,         
+        'version': dataVersion,
         'type': "agentCharacter",       #数字人
         'id': "template",               #字符串id
         'name': "",                     #名字
@@ -34,52 +21,70 @@ def newAgentCharacter():#新建数字人
         'modeling': "",                 #外貌描述
         'emotion': "",                  #情感
         'lastTick': 0,                  #上次调用时的Tick
-        'memory': [],                   #的记忆
-        'relations': {},                #的关系
-        'rawChatHistory': [],           #的对话历史
-        'externalFiles': []             
+        'memory': [],                   #记忆
+        'relations': [],                #关系
+        'rawChatHistory': [],           #对话历史
+        'externalFiles': [
+            { 'key':'personality', 'format':"txt" },
+            { 'key':'modeling', 'format':"txt" },
+            { 'key':'rawChatHistory', 'format':"json" }
+        ]
     }
-def newInstance():
-    return {
-        'version': dataVersion,         
-        'type': "instance",             #世界数据
-        'name': "默认房间",
-        'simulationName': "模板",
-        'countries': [],                     #唯一的房间
-        'externalFiles': []             
+
+def newInstance(instanceLevel:str="singleCharacter")->dict:#新建模拟识别单元"实例"
+    data={
+        'version': dataVersion,
+        'type': "instance",
+        'level': "",
+        'backend': defaultAgentBackend,
+        'name': "demo实例",
+        'contains': [],
+        'containsData': [],
+        'externalFiles': [
+            { 'key':'contains', 'format':"json" },
+            { 'key':'containsData', 'format':"json" }
+        ]
     }
-def newWholeStructure():#新建整个实例
-    room=newRoom()
-    agentCharacter=newAgentCharacter()
-    agentCharacter['externalFiles']=[
-        { 'path': "characters/template/personality.txt", 'key': 'personality'},
-        { 'path': "characters/template/modeling.txt", 'key': 'modeling'},
-        { 'path': "characters/template/rawChatHistory.json", 'key': 'rawChatHistory'},
-        { 'path': "characters/template/memory.json", 'key': 'memory'},
-        { 'path': "characters/template/relations.json", 'key': 'relations'}
-    ]
-    room['characters'].append(agentCharacter)
-    room['externalFiles']=[
-        { 'path': "characters/characters.json", 'key': 'characters'},     
-        { 'path': "rooms/room/history.json", 'key': 'history'}
-    ]
-    world=newInstance()
-    world['countries']=[room]
-    world['externalFiles']=[{ 'path': "rooms/room.json", 'key': 'room'}]
-    return world
+    if instanceLevel in [ "singleCharacter" ]:
+        data['level']=instanceLevel
+        data['contains']=[ newAgentCharacter() ]
+    else:
+        raise RuntimeError(instanceLevel+" Not supported in this version")
+    return data
 
 #数据保存逻辑
-def saveAll(baseDir:Path, instance:dict, secretify:bool=False):
-    baseDir=baseDir.resolve()
-    instanceDir=Path(baseDir/instance['simulationName'])
-    instanceDir.mkdir(exist_ok=True)
-    instanceConfigPath=instanceDir/"wemu_config.json"
+def processExternalFilesSave(instancePath:Path, instance:dict):
+    instancePath.mkdir(parents=True, exist_ok=True)
+    for key in instance['externalFiles']:
+        rawData=""
+        dataFile=instancePath
+        if key['format']=="json":
+            rawData=json.dumps(instance[key['key']], ensure_ascii=False, indent=2)
+            dataFile=Path(instancePath/(key['key']+".json"))
+            instance[key['key']]=[]
+        elif key['format']=="txt":
+            rawData=instance[key['key']]
+            dataFile=Path(instancePath/(key['key']+".txt"))
+            instance[key['key']]=""
+        else:
+            raise RuntimeError("Errors in externalFiles")
+        dataFile.write_text(rawData, encoding='utf-8')
 
-    if instance['type']=='world':
-        print()
-    else:
-        print()
+def saveInstance( userDataPath:Path=Path("userdata"), instance:dict=newInstance() ):
+    userDataPath=Path(userDataPath)
+    instanceSavePath=Path(userDataPath/instance['name'])
+    instanceSavePath.mkdir(parents=True, exist_ok=True)
+    # 处理ExternalFiles的逻辑放在这之间
+    for containedThing in instance['contains']:
+        if containedThing['type'].endswith('Character'):
+            characterPath=Path(instanceSavePath/"characters"/containedThing['id'])
+            processExternalFilesSave(characterPath,containedThing)
+        else:
+            raise RuntimeError("Something went wrong in WEMU")
+    processExternalFilesSave(instanceSavePath/"instance",instance)
+    # 处理ExternalFiles的逻辑放在这之间
+    instanceRaw=json.dumps(instance, ensure_ascii=False, indent=2)
+    instanceJson=instanceSavePath/"wemuInstance.json"
+    instanceJson.write_text(instanceRaw, encoding='utf-8')
 
-    instanceConfigPath.write_text(json.dumps(instance, ensure_ascii=False, indent=2), encoding='utf-8')
-
-saveAll(baseDir=Path("userdata"),instance=newWholeStructure())
+#数据加载逻辑
