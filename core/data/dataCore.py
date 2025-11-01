@@ -70,17 +70,14 @@ def processExternalFilesSave(instancePath:Path, instance:dict):
             raise RuntimeError("Errors in externalFiles")
         dataFile.write_text(rawData, encoding='utf-8')
 
-def saveInstance( userDataPath:Path=Path("userdata"), instance:dict=newInstance() ):
+def saveInstance(userDataPath:Path=Path("userdata"), instance:dict=newInstance()):
     userDataPath=Path(userDataPath)
     instanceSavePath=Path(userDataPath/instance['name'])
     instanceSavePath.mkdir(parents=True, exist_ok=True)
     # 处理ExternalFiles的逻辑放在这之间
     for containedThing in instance['contains']:
-        if containedThing['type'].endswith('Character'):
-            characterPath=Path(instanceSavePath/"characters"/containedThing['id'])
-            processExternalFilesSave(characterPath,containedThing)
-        else:
-            raise RuntimeError("Something went wrong in WEMU")
+        characterPath=Path(instanceSavePath/containedThing['type']/containedThing['id'])
+        processExternalFilesSave(characterPath,containedThing)
     processExternalFilesSave(instanceSavePath/"instance",instance)
     # 处理ExternalFiles的逻辑放在这之间
     instanceRaw=json.dumps(instance, ensure_ascii=False, indent=2)
@@ -88,3 +85,31 @@ def saveInstance( userDataPath:Path=Path("userdata"), instance:dict=newInstance(
     instanceJson.write_text(instanceRaw, encoding='utf-8')
 
 #数据加载逻辑
+def processExternalFilesLoad(instancePath:Path, instance:dict)->dict:
+    extFileDir=Path(instancePath/instance['type'])
+    if instance['type'].endswith("Character"):
+        extFileDir=Path(extFileDir/instance['id'])
+    for key in instance['externalFiles']:
+        extFile=extFileDir
+        if key['format']=="json":
+            extFile=Path(extFileDir/(key['key']+".json"))
+            with open(extFile, 'r', encoding='utf-8') as f:
+                instance[key['key']]=json.load(f)
+        elif key['format']=="txt":
+            extFile=Path(extFileDir/(key['key']+".txt"))
+            with open(extFile, 'r', encoding='utf-8') as f:
+                instance[key['key']]=f.read()
+    return instance
+
+def loadInstance(instanceDir:Path)->dict:
+    instanceDir=Path(instanceDir)
+    instanceJsonPath=instanceDir/"wemuInstance.json"
+    with open(instanceJsonPath, 'r', encoding='utf-8') as f:
+        instance=json.load(f)
+    instance=processExternalFilesLoad(instanceDir,instance)
+    for things in instance['contains']:
+        instance['contains'].remove(things)
+        instance['contains'].append(processExternalFilesLoad(instanceDir,things))
+    return instance
+
+print(loadInstance("userdata/demo实例"))
