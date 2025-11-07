@@ -11,15 +11,15 @@ defaultAgentBackend={
 }
 
 #数据新建逻辑
-def newAgentCharacter()->dict:#新建数字人角色
+def newAgentCharacter(id:str="demo",name:str="demo人物",personality:str="请编辑此设定字段后再加载该数字人",modeling:str="")->dict:#新建数字人角色
     return {
         'version': dataVersion,
         'type': "agentCharacter",       #数字人
-        'id': "template",               #字符串id
-        'name': "",                     #名字
-        'personality': "",              #人格描述
-        'modeling': "",                 #外貌描述
-        'emotion': "",                  #情感
+        'id': id,               #字符串id
+        'name': name,                     #名字
+        'personality': personality,              #人格描述
+        'modeling': modeling,                 #外貌描述
+        'emotion': "平静",                  #情感
         'lastTick': 0,                  #上次调用时的Tick
         'memory': [],                   #记忆
         'relations': [],                #关系
@@ -31,25 +31,24 @@ def newAgentCharacter()->dict:#新建数字人角色
         ]
     }
 
-def newInstance(instanceLevel:str="singleCharacter")->dict:#新建模拟识别单元"实例"
+def newInstance(name:str="demo")->dict:#新建模拟识别单元"实例"
     data={
         'version': dataVersion,
         'type': "instance",
-        'level': "",
         'backend': defaultAgentBackend,
-        'name': "demo实例",
-        'contains': [],
-        'containsData': [],
+        'name': name,
+        'characters': [],
+        'rooms': [],
+        'worlds': [],
+        'history': [],
+        'resume': [],
         'externalFiles': [
-            { 'key':'contains', 'format':"json" },
-            { 'key':'containsData', 'format':"json" }
+            { 'key':'characters', 'format':"json" },
+            { 'key':'rooms', 'format':"json" },
+            { 'key':'worlds', 'format':"json" },
+            { 'key':'history', 'format':"json" }
         ]
     }
-    if instanceLevel in [ "singleCharacter" ]:
-        data['level']=instanceLevel
-        data['contains']=[ newAgentCharacter() ]
-    else:
-        raise RuntimeError(instanceLevel+" Not supported in this version")
     return data
 
 #数据保存逻辑
@@ -74,19 +73,21 @@ def saveInstance(userDataPath:Path=Path("userdata"), instance:dict=newInstance()
     userDataPath=Path(userDataPath)
     instanceSavePath=Path(userDataPath/instance['name'])
     instanceSavePath.mkdir(parents=True, exist_ok=True)
-    # 处理ExternalFiles的逻辑放在这之间
-    for containedThing in instance['contains']:
-        characterPath=Path(instanceSavePath/containedThing['type']/containedThing['id'])
+    for key in ['rooms','worlds']:
+        for containedThing in instance[key]:
+            keyPath=Path(instanceSavePath/key)
+            processExternalFilesSave(keyPath,containedThing)
+    for containedThing in instance['characters']:
+        characterPath=Path(instanceSavePath/"characters"/containedThing['id'])
         processExternalFilesSave(characterPath,containedThing)
     processExternalFilesSave(instanceSavePath/"instance",instance)
-    # 处理ExternalFiles的逻辑放在这之间
     instanceRaw=json.dumps(instance, ensure_ascii=False, indent=2)
     instanceJson=instanceSavePath/"wemuInstance.json"
     instanceJson.write_text(instanceRaw, encoding='utf-8')
 
 #数据加载逻辑
 def processExternalFilesLoad(instancePath:Path, instance:dict)->dict:
-    extFileDir=Path(instancePath/instance['type'])
+    extFileDir=Path(instancePath)
     if instance['type'].endswith("Character"):
         extFileDir=Path(extFileDir/instance['id'])
     for key in instance['externalFiles']:
@@ -106,8 +107,29 @@ def loadInstance(instanceDir:Path)->dict:
     instanceJsonPath=instanceDir/"wemuInstance.json"
     with open(instanceJsonPath, 'r', encoding='utf-8') as f:
         instance=json.load(f)
-    instance=processExternalFilesLoad(instanceDir,instance)
-    for things in instance['contains']:
-        instance['contains'].remove(things)
-        instance['contains'].append(processExternalFilesLoad(instanceDir,things))
+    instance=processExternalFilesLoad(instanceDir/"instance",instance)
+    for key in ['rooms','worlds','characters']:
+        for containedThing in instance[key]:
+            instance[key]=processExternalFilesLoad(instanceDir/key,containedThing)
     return instance
+
+#测试函数
+def main():
+    print("AgentData:",newAgentCharacter())
+    print("InstanceData:",newInstance())
+    print("Save testing...")
+    test=newInstance()
+    test['characters'].append(newAgentCharacter())
+    test['worlds'].append({'name':'demoWorld','type':'world','externalFiles':[]})
+    test['rooms'].append({'name':'demoRoom','type':'room','externalFiles':[]})
+    saveInstance(instance=test)
+    input("Press Enter to continue...")
+    print("Load testing...")
+    test=loadInstance(Path("userdata/demo"))
+    print("Loaded data:",test)
+    input("Press Enter to continue...")
+    print("Testing Complete")
+
+if __name__ == "__main__":
+    print("DataCore Module Testing...")
+    main()
