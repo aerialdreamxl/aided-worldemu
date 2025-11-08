@@ -1,9 +1,4 @@
-from .dataCore import newAgentCharacter,newInstance,saveInstance,loadInstance
+from .data import data
+from .backend import backend
 
-class data:
-   newAgentCharacter = newAgentCharacter
-   newInstance = newInstance
-   saveInstance = saveInstance
-   loadInstance = loadInstance
-
-__all__ = ["data"]
+__all__ = ["data","backend"]
