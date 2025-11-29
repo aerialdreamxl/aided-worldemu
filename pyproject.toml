@@ -29,3 +29,6 @@ dependencies = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["wemu_core*"]
+
+[project.scripts]
+wemu-cli = "wemu_core.cli:main"
