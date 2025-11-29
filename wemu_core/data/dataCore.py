@@ -11,7 +11,7 @@ defaultAgentBackend={
 }
 
 #数据新建逻辑
-def newAgentCharacter(id:str="demo",name:str="demo人物",personality:str="请编辑此设定字段后再加载该数字人",modeling:str="")->dict:#新建数字人角色
+def newAgentCharacter(id:str="demo",name:str="DEFAULT",personality:str="无",modeling:str="无")->dict:#新建数字人角色
     return {
         'version': dataVersion,
         'type': "agentCharacter",       #数字人

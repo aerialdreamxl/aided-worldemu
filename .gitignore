@@ -1,3 +1,4 @@
 userdata
 tmpdata
+*.egg-info/
 .venv

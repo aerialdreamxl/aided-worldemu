@@ -1,39 +1,31 @@
-# pyproject.toml 是 Python 项目的标准配置文件
-# 用于定义项目的元数据、依赖关系和构建配置
-
 [build-system]
-# 指定使用 setuptools 作为构建后端
-requires = ["setuptools>=45", "wheel"]
+requires = ["setuptools >= 61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-# 项目基本元数据
-name = "wemu-core"
-version = "0.1.0"
-description = "A simple world emulator using AI agents"
-# 使用 GPLv3 许可证
-license = {text = "GPL-3.0-or-later"}
-readme = "README.md"
-# 支持的 Python 版本
-requires-python = ">=3.8"
-# 项目分类信息
-classifiers = [
-    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8"
+name = "wemu_core"
+version = "0.0.1a0"
+description = "A simple social emulater using AI agents"
+authors = [
+    { name = "Aerodream Granite", email = "yxdowncomputer@outlook.com" }
 ]
-# 项目依赖项（根据实际需要修改）
+readme = "README.md"
+license = { text = "GNU General Public License v3 (GPLv3)" }
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Games/Entertainment :: Simulation"
+]
+requires-python = ">=3.8"
 dependencies = [
     "openai",
-    "dashscope"
+    "dashscope",
 ]
 
-# 开发依赖项（可选）
-[project.optional-dependencies]
-dev = [
-    "pytest>=6.0"
-]
-
-# 自动发现项目包
 [tool.setuptools.packages.find]
 where = ["."]
+include = ["wemu_core*"]
