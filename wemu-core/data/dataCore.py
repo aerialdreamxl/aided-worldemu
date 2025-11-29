@@ -19,6 +19,7 @@ def newAgentCharacter(id:str="demo",name:str="demo人物",personality:str="请�
         'name': name,                     #名字
         'personality': personality,              #人格描述
         'modeling': modeling,                 #外貌描述
+        'warmupNotes': "",
         'emotion': "平静",                  #情感
         'lastTick': 0,                  #上次调用时的Tick
         'memory': [],                   #记忆
