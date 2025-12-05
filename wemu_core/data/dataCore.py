@@ -2,13 +2,12 @@ import json
 import os
 from pathlib import Path
 
-dataVersion=0
+dataVersion=1
 defaultAgentBackend={
-    'type': "openai",
-    'baseURL': "http://127.0.0.1:11434/v1",
-    'model': "qwen3:30b",
-    'apiKey': "ollama"
+    'lm-studio': { 'type': "openai", 'baseURL': "http://127.0.0.1:1234/v1", 'apiKey': "lm-studio" },
+    'ollama': { 'type': "openai", 'baseURL': "http://127.0.0.1:11434/v1", 'apiKey': "ollama" }
 }
+
 
 #数据新建逻辑
 def newAgentCharacter(id:str="demo",name:str="DEFAULT",personality:str="无",modeling:str="无")->dict:#新建数字人角色
@@ -20,15 +19,15 @@ def newAgentCharacter(id:str="demo",name:str="DEFAULT",personality:str="无",mod
         'personality': personality,              #人格描述
         'modeling': modeling,                 #外貌描述
         'warmupNotes': "",
-        'emotion': "平静",                  #情感
+        'emotion': "",                  #情感
         'lastTick': 0,                  #上次调用时的Tick
         'memory': [],                   #记忆
         'relations': [],                #关系
         'rawChatHistory': [],           #对话历史
         'externalFiles': [
-            { 'key':'personality', 'format':"txt" },
-            { 'key':'modeling', 'format':"txt" },
-            { 'key':'rawChatHistory', 'format':"json" }
+            { 'key':'personality', 'savedir':["character","#*NAME*#"], 'format':"txt" },
+            { 'key':'modeling', 'savedir':["character","#*NAME*#"], 'format':"txt" },
+            { 'key':'rawChatHistory', 'savedir':["character","#*NAME*#"], 'format':"json" }
         ]
     }
 
@@ -36,7 +35,7 @@ def newInstance(name:str="demo")->dict:#新建模拟识别单元"实例"
     data={
         'version': dataVersion,
         'type': "instance",
-        'backend': defaultAgentBackend,
+        'backend': defaultAgentBackend['lm-studio'],
         'name': name,
         'characters': [],
         'rooms': [],
@@ -44,74 +43,74 @@ def newInstance(name:str="demo")->dict:#新建模拟识别单元"实例"
         'history': [],
         'resume': [],
         'externalFiles': [
-            { 'key':'characters', 'format':"json" },
-            { 'key':'rooms', 'format':"json" },
-            { 'key':'worlds', 'format':"json" },
-            { 'key':'history', 'format':"json" }
+            { 'key':'characters', 'savedir':["character"], 'format':"json" },
+            { 'key':'rooms', 'savedir':["room"], 'format':"json" },
+            { 'key':'worlds', 'savedir':["world"], 'format':"json" },
+            { 'key':'history', 'savedir':[], 'format':"json" }
         ]
     }
     return data
 
 #数据保存逻辑
-def processExternalFilesSave(instancePath:Path, instance:dict):
-    instancePath.mkdir(parents=True, exist_ok=True)
-    for key in instance['externalFiles']:
-        rawData=""
-        dataFile=instancePath
-        if key['format']=="json":
-            rawData=json.dumps(instance[key['key']], ensure_ascii=False, indent=2)
-            dataFile=Path(instancePath/(key['key']+".json"))
-            instance[key['key']]=[]
-        elif key['format']=="txt":
-            rawData=instance[key['key']]
-            dataFile=Path(instancePath/(key['key']+".txt"))
-            instance[key['key']]=""
+def processExternalFilesSave(instancePath:Path, instance:dict)->dict:
+    fullPath=Path(instancePath).resolve()
+    for ext in instance['externalFiles']:
+        extPath=fullPath
+        for extp in ext['savedir']:
+            if extp=="#*NAME*#":
+                extp=instance['id']
+            extPath=extPath/extp
+        extPath.mkdir(parents=True, exist_ok=True)
+        extPath=Path(extPath/(ext['key']+"."+ext['format']))
+        if ext['format']=='json':
+            extData=instance[ext['key']]
+            extRaw=json.dumps(extData, ensure_ascii=False, indent=2)
+            extPath.write_text(extRaw, encoding="utf-8")
+            instance[ext['key']]=[]
         else:
-            raise RuntimeError("Errors in externalFiles")
-        dataFile.write_text(rawData, encoding='utf-8')
+            extData=instance[ext['key']]
+            extPath.write_text(extData, encoding="utf-8")
+            instance[ext['key']]=""
+    return instance
 
 def saveInstance(userDataPath:Path=Path("userdata"), instance:dict=newInstance()):
-    userDataPath=Path(userDataPath)
-    instanceSavePath=Path(userDataPath/instance['name'])
-    instanceSavePath.mkdir(parents=True, exist_ok=True)
-    for key in ['rooms','worlds']:
-        for containedThing in instance[key]:
-            keyPath=Path(instanceSavePath/key)
-            processExternalFilesSave(keyPath,containedThing)
-    for containedThing in instance['characters']:
-        characterPath=Path(instanceSavePath/"characters"/containedThing['id'])
-        processExternalFilesSave(characterPath,containedThing)
-    processExternalFilesSave(instanceSavePath/"instance",instance)
+    instancePath=Path(userDataPath/instance['name']).resolve()
+    for a in ["characters","rooms","worlds"]:
+        for b in instance[a]:
+            b=processExternalFilesSave(instancePath,b)
+    instance=processExternalFilesSave(instancePath,instance)
     instanceRaw=json.dumps(instance, ensure_ascii=False, indent=2)
-    instanceJson=instanceSavePath/"wemuInstance.json"
+    instanceJson=instancePath/"wemuInstance.json"
     instanceJson.write_text(instanceRaw, encoding='utf-8')
 
 #数据加载逻辑
 def processExternalFilesLoad(instancePath:Path, instance:dict)->dict:
-    extFileDir=Path(instancePath)
-    if instance['type'].endswith("Character"):
-        extFileDir=Path(extFileDir/instance['id'])
-    for key in instance['externalFiles']:
-        extFile=extFileDir
-        if key['format']=="json":
-            extFile=Path(extFileDir/(key['key']+".json"))
-            with open(extFile, 'r', encoding='utf-8') as f:
-                instance[key['key']]=json.load(f)
-        elif key['format']=="txt":
-            extFile=Path(extFileDir/(key['key']+".txt"))
-            with open(extFile, 'r', encoding='utf-8') as f:
-                instance[key['key']]=f.read()
+    fullPath=Path(instancePath).resolve()
+    for ext in instance['externalFiles']:
+        extPath=fullPath
+        for extp in ext['savedir']:
+            if extp=="#*NAME*#":
+                extp=instance['id']
+            extPath=extPath/extp
+        extPath=extPath/(ext['key']+"."+ext['format'])
+        if ext['format']=="json":
+            with open(extPath, 'r', encoding='utf-8') as f:
+                instance[ext['key']]=json.load(f)
+        else:
+            with open(extPath, 'r', encoding='utf-8') as f:
+                instance[ext['key']]=f.read()
     return instance
+
 
 def loadInstance(instanceDir:Path)->dict:
     instanceDir=Path(instanceDir)
     instanceJsonPath=instanceDir/"wemuInstance.json"
     with open(instanceJsonPath, 'r', encoding='utf-8') as f:
         instance=json.load(f)
-    instance=processExternalFilesLoad(instanceDir/"instance",instance)
+    instance=processExternalFilesLoad(instanceDir,instance)
     for key in ['rooms','worlds','characters']:
         for containedThing in instance[key]:
-            instance[key]=processExternalFilesLoad(instanceDir/key,containedThing)
+            instance[key]=processExternalFilesLoad(instanceDir,containedThing)
     return instance
 
 #测试函数
