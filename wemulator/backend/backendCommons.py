@@ -28,13 +28,11 @@ def merge_config(world_setting: dict, entity_ai_backend: Optional[dict] = None) 
     :param entity_ai_backend: WAA["aiBackend"] 字典 (可选)
     :return: 合并后的完整配置字典
     """
-    readyConfig = world_setting["agent-ai-defaults"].copy()
+    readyConfig = entity_ai_backend.copy()
 
-    if entity_ai_backend:
-        if entity_ai_backend.get("model"):
-            readyConfig["model"] = entity_ai_backend["model"]
-        if entity_ai_backend.get("modelLang"):
-            readyConfig["modelLang"] = entity_ai_backend["modelLang"]
+    for i in ["baseURL","apiKey","model","modelLang","expertSettings","temperature","seed","top-p","extraBody"]:
+        if readyConfig.get(i) == None:
+            readyConfig[i] = world_setting["agent-api-defaults"][i]
     
     readyConfig["apiKey"] = resolve_api_key(key=readyConfig["apiKey"])
     

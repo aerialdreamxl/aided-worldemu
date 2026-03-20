@@ -23,7 +23,8 @@ def new(name: str = "New World", type: str = "World") -> dict:
                     "baseURL": "http://localhost:1234/v1",# OpenAI API或是未来其他什么东西的base url
                     "apiKey": ENV_PLACEHOLDER,# 你的API Key，这边建议保管好别丢了
                     "model": "qwen3.5-35b-a3b",# 默认的模型，随便你喜欢的什么模型，但建议使用Qwen系模型，因为我是在这种模型上测试的
-                    "modelLang": "zhcn" # 你喜欢的模型的母语，就是开发该模型的团队或个人的母语，例如Qwen是阿里云开发的，母语是中文，llama是MetaAI开发的，母语是英文
+                    "modelLang": "zhcn",# 你喜欢的模型的母语，就是开发该模型的团队或个人的母语，例如Qwen是阿里云开发的，母语是中文，llama是MetaAI开发的，母语是英文
+                    "expertSettings": False # 允许你自定义temperature，seed，top_p和extra_body，但目前只能覆写，所以加个高级设置开关
                 }
             },
             "entities": [],# 实体列表，目前只做了WAAConfig
