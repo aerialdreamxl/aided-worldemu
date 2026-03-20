@@ -3,9 +3,9 @@ requires = ["setuptools >= 61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "wemu_core"
+name = "wemulator"
 version = "0.0.1a0"
-description = "A simple social emulater using AI agents"
+description = "A simple social emulator using AI agents"
 authors = [
     { name = "Aerodream Granite", email = "yxdowncomputer@outlook.com" }
 ]
@@ -24,11 +24,13 @@ requires-python = ">=3.8"
 dependencies = [
     "openai",
     "dashscope",
+    "uuid",
+    "gradio"
 ]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["wemu_core*"]
+include = ["wemulator*"]
 
 [project.scripts]
-wemu-cli = "wemu_core.cli:main"
+wemu-gradio = "wemulator.webui.webui:main"
